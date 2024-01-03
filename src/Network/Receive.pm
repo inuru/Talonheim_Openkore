@@ -7052,7 +7052,7 @@ sub item_disappeared {
 						|| ($control->{attack_sp}   ne "" && $control->{attack_sp} > $char->{sp})
 						);
 				}
-				if (distance($item->{pos}, $monster->{pos}) == 0) {
+				if (distance($item->{pos}, $monster->{pos}) <= ($config{attackLooters_dist} || 0)) {
 					attack($monster->{ID});
 					message TF("Attack Looter: %s looted %s\n", $monster->nameIdx, $item->{name}), "looter";
 					last;
@@ -11800,12 +11800,15 @@ sub skill_use_failed {
 
 	delete $char->{casting};
 
-	warning TF("Skill %s failed: %s (error number %s)\n", Skill->new(idn => $skillID)->getName(), $errorMessage, $type), "skill";
-	Plugins::callHook('packet_skillfail', {
-		skillID     => $skillID,
-		failType    => $type,
-		failMessage => $errorMessage
-	});
+	my %hookArgs;
+	$hookArgs{skillID} = $skillID;
+	$hookArgs{failType} = $type;
+	$hookArgs{failMessage} = $errorMessage;
+	$hookArgs{warn} = 1;
+
+	Plugins::callHook('packet_skillfail', \%hookArgs);
+
+	warning(TF("Skill %s failed: %s (error number %s)\n", Skill->new(idn => $skillID)->getName(), $errorMessage, $type), "skill") if ($hookArgs{warn});
 }
 
 sub open_store_status {
